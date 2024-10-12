@@ -24,7 +24,8 @@ About Sonic Labs (Prev Fantom)
 - Get faucet $S token from <https://testnet.soniclabs.com/account>
 - After you get token, play all game at least once!!!
 
-> [Warning]
+> [!warning]
+> 
 > REMEMBER TO CLAIM FAUCET WEEKLY
 
 ## Installation
