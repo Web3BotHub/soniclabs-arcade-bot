@@ -10,6 +10,11 @@ async function run(account, proxy) {
     log.info(`Initializing account: ${PRIVATE_KEYS.indexOf(account) + 1}`)
     await app.connect()
     await app.getBalance()
+
+    if (app.balance < 1) {
+      throw new Error(`Your balance is too low: ${app.balance}, You can get free tokens from the faucet: https://testnet.soniclabs.com/account`)
+    }
+
     await app.connectToSonic()
     await app.getUser()
     await app.tryToUpdateReferrer()
@@ -36,8 +41,8 @@ async function run(account, proxy) {
 
     return run(account, proxy)  // Restart cycle
   } catch (error) {
-    log.info(`Account ${PRIVATE_KEYS.indexOf(account) + 1}: Error encountered. Retrying in 10 seconds.`)
-    await wait(10000, account, `Error: ${error.message || JSON.stringify(error)}. Retrying in 10 seconds`, app)
+    log.info(`Account ${PRIVATE_KEYS.indexOf(account) + 1}: Error encountered. Retrying in 30 seconds.`)
+    await wait(30000, account, `Error: ${error.message || JSON.stringify(error)}. Retrying in 30 seconds`, app)
     return run(account, proxy)  // Retry operation
   }
 }
