@@ -1,5 +1,7 @@
 # Soniclabs Arcade Testnet BOT
 
+[手把手中文使用教程](https://mirror.xyz/dashboard/edit/doONPWouG7PraOIJvQE5ZHxyXfze9iuM1tfLZ8HFLy4)
+
 About Sonic Labs (Prev Fantom)
 
 - Register: [https://airdrop.soniclabs.com/](https://airdrop.soniclabs.com/?ref=kfpbi7 )
@@ -25,7 +27,7 @@ About Sonic Labs (Prev Fantom)
 - After you get token, play all game at least once!!!
 
 > [!warning]
-> 
+>
 > REMEMBER TO CLAIM FAUCET WEEKLY
 
 ## Installation

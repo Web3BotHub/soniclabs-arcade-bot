@@ -50,7 +50,7 @@ async function startBot() {
       throw new Error(`Mismatch detected: ${PRIVATE_KEYS.length} accounts and ${PROXIES.length} proxies.`)
     }
 
-    const tasks = PRIVATE_KEYS.map((account, index) => run(account, PROXIES[index]))
+    const tasks = PRIVATE_KEYS.map((account, index) => run(account, PROXIES[index] || undefined))
     await Promise.all(tasks)
   } catch (error) {
     console.error('Bot halted due to error:', error)
