@@ -1,0 +1,8 @@
+node_modules
+test.js
+sessions/*
+package-lock.json
+.DS_Store
+proxies.txt
+.env
+*.log

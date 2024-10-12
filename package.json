@@ -1,0 +1,33 @@
+{
+  "name": "soniclabs-arcade-bot",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "soniclabs arcade bot for daily tasks",
+  "keywords": [
+    "soniclabs-arcade",
+    "soniclabs-arcade-bot",
+    "soniclabs-arcade-tx-bot",
+    "soniclabs-arcade-tasks",
+    "overtrue"
+  ],
+  "main": "index.js",
+  "dependencies": {
+    "bip39": "^3.1.0",
+    "dotenv": "^16.4.5",
+    "ethers": "^6.13.2",
+    "https-proxy-agent": "^7.0.5",
+    "twisters": "^1.1.0",
+    "winston": "^3.13.0"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node index.js",
+    "test": "node test.js"
+  },
+  "author": "overtrue",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/web3bothub/soniclabs-arcade-bot.git"
+  }
+}
