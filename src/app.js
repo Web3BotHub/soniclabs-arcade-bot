@@ -9,12 +9,12 @@ export default class App extends Client {
     super('https://airdrop.soniclabs.com', proxy, 'airdrop.soniclabs.com')
     this.sessionId = 1
     this.wallet = null
-    this.today_points = 0
-    this.total_points = 0
+    this.today_points = null
+    this.total_points = null
     this.account = account
     this.address = null
     this.smartAddress = smartAddress
-    this.permitSignature = undefined
+    this.permitSignature = null
     this.referrerCode = REFERRER_CODE
     this.limitedGames = {}
     this.provider = new ethers.JsonRpcProvider(RPC.RPCURL, RPC.CHAINID)
