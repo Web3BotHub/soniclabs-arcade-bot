@@ -2,7 +2,13 @@ import App from './app.js'
 import { GAMES, PRIVATE_KEYS, PROXIES } from './config.js'
 import log from './log.js'
 import Output from './output.js'
-import { wait } from './utils.js'
+import { toHumanTime, wait } from './utils.js'
+
+async function play(app, game) {
+  while (!app.limitedGames[game]) {
+    await app.playGame(game)
+  }
+}
 
 async function run(account, proxy) {
   const app = new App(account, proxy)
@@ -20,9 +26,7 @@ async function run(account, proxy) {
     for (const game in GAMES) {
       if (Object.prototype.hasOwnProperty.call(GAMES, game)) {
         try {
-          while (!app.limitedGames[game]) {
-            await app.playGame(game)
-          }
+          play(app, game)
         } catch (error) {
           throw error
         }
@@ -31,8 +35,8 @@ async function run(account, proxy) {
 
     // Schedule next cycle
     const duration = 4320000
-    log.info(`Cycle complete for account ${app.address}. Pausing for ${Helper.msToTime(duration)}`)
-    await wait(duration, account, `Delaying for next cycle: ${Helper.msToTime(duration)}`, app)
+    log.info(`Cycle complete for account ${app.address}. Pausing for ${toHumanTime(duration)}`)
+    await wait(duration, account, `Delaying for next cycle: ${toHumanTime(duration)}`, app)
 
     return run(account, proxy)  // Restart cycle
   } catch (error) {
