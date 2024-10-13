@@ -25,8 +25,9 @@ About Sonic Labs (Prev Fantom)
 
 - Get faucet $S token from <https://testnet.soniclabs.com/account>
 - After you get token, play all game at least once!!!
+- Get your smart wallet address from <https://testnet.soniclabs.com/account> and copy it from top right navigation dropdown.
 
-> [!warning]
+> [!tip]
 >
 > REMEMBER TO CLAIM FAUCET WEEKLY
 
@@ -50,6 +51,9 @@ About Sonic Labs (Prev Fantom)
    cp .env.example .env
    vim .env
    ```
+
+> [!tip]
+> Please read the comments in `.env` file and fill in the required information.
 
 1. start the bot
 

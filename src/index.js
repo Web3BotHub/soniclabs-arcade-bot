@@ -1,12 +1,13 @@
 import App from './app.js'
-import { GAMES, PRIVATE_KEYS, PROXIES } from './config.js'
+import { GAMES, PRIVATE_KEYS, PROXIES, SMART_ADDRESSES } from './config.js'
 import log from './log.js'
 import Output from './output.js'
 import { toHumanTime, wait } from './utils.js'
 
 async function play(app, game) {
   while (!app.limitedGames[game]) {
-    await app.playGame(game)
+    const method = 'play' + game.charAt(0).toUpperCase() + game.slice(1)
+    await app[method]()
   }
 }
 
@@ -18,20 +19,24 @@ async function run(account, proxy) {
     await app.getBalance()
     await app.connectToSonic()
     await app.getUser()
+    await app.getPoints()
     await app.tryToUpdateReferrer()
     await app.createSession()
     await app.permitTypedMessage()
 
+    const promises = []
     // Game cycles
     for (const game in GAMES) {
       if (Object.prototype.hasOwnProperty.call(GAMES, game)) {
         try {
-          play(app, game)
+          promises.push(play(app, game))
         } catch (error) {
           throw error
         }
       }
     }
+
+    await Promise.all(promises)
 
     // Schedule next cycle
     const duration = 4320000
@@ -51,10 +56,18 @@ async function startBot() {
     Output.info('Starting Bot...')
 
     if (PROXIES.length !== PRIVATE_KEYS.length && PROXIES.length !== 0) {
-      throw new Error(`Mismatch detected: ${PRIVATE_KEYS.length} accounts and ${PROXIES.length} proxies.`)
+      throw new Error(`the number of proxies must match the number of accounts or be empty.`)
     }
 
-    const tasks = PRIVATE_KEYS.map((account, index) => run(account, PROXIES[index] || undefined))
+    if (SMART_ADDRESSES.length !== PRIVATE_KEYS.length && SMART_ADDRESSES.length !== 0) {
+      throw new Error(`the number of smart addresses must match the number of accounts or be empty.`)
+    }
+
+    const tasks = PRIVATE_KEYS.map((account, index) => run(
+      account,
+      SMART_ADDRESSES[index] || undefined,
+      PROXIES[index] || undefined)
+    )
     await Promise.all(tasks)
   } catch (error) {
     console.error('Bot halted due to error:', error)

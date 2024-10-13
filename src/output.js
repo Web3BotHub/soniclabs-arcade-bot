@@ -11,10 +11,12 @@ class Output {
     this.twisters.put(address, {
       text: `Account ${PRIVATE_KEYS.indexOf(address) + 1}
 -----------------
-Address  : ${app.address ?? '-'}
-Balance  : ${app.balance ?? '-'} ${RPC.SYMBOL}
-Status   : ${account}
-Waiting  : ${waiting}
+Address      : ${app.address ?? '-'}
+SmartAddress : ${app.smartAddress ?? '-'}
+Balance      : ${app.balance ?? '-'} ${RPC.SYMBOL}
+Points       : today: ${app.today_points ?? '-'} / total: ${app.total_points ?? '-'}
+Status       : ${account}
+Waiting      : ${waiting}
 -----------------`
     })
   }
