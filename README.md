@@ -4,9 +4,9 @@
 
 About Sonic Labs (Prev Fantom)
 
-- Register: [https://airdrop.soniclabs.com/](https://airdrop.soniclabs.com/?ref=kfpbi7 )
+- Register: [https://airdrop.soniclabs.com/](https://airdrop.soniclabs.com/?ref=tql092 )
 - Connect Wallet to Sonic Testnet
-- Enter Access Code: `kfpbi7`
+- Enter Access Code: `tql092`
 - Get Faucet : <https://testnet.soniclabs.com/account>
 
 ## Features
