@@ -11,8 +11,8 @@ async function play(app, game) {
   }
 }
 
-async function run(account, proxy) {
-  const app = new App(account, proxy)
+async function run(account, smartAddress, proxy) {
+  const app = new App(account, smartAddress, proxy)
   try {
     log.info(`Initializing account: ${PRIVATE_KEYS.indexOf(account) + 1}`)
     await app.connect()
@@ -43,11 +43,11 @@ async function run(account, proxy) {
     log.info(`Cycle complete for account ${app.address}. Pausing for ${toHumanTime(duration)}`)
     await wait(duration, account, `Delaying for next cycle: ${toHumanTime(duration)}`, app)
 
-    return run(account, proxy)  // Restart cycle
+    return run(account, smartAddress, proxy)  // Restart cycle
   } catch (error) {
     log.info(`Account ${PRIVATE_KEYS.indexOf(account) + 1}: Error encountered. Retrying in 10 seconds.`)
     await wait(10000, account, `Error: ${error.message || JSON.stringify(error)}. Retrying in 10 seconds`, app)
-    return run(account, proxy)  // Retry operation
+    return run(account, smartAddress, proxy)  // Retry operation
   }
 }
 
@@ -57,10 +57,6 @@ async function startBot() {
 
     if (PROXIES.length !== PRIVATE_KEYS.length && PROXIES.length !== 0) {
       throw new Error(`the number of proxies must match the number of accounts or be empty.`)
-    }
-
-    if (SMART_ADDRESSES.length !== PRIVATE_KEYS.length && SMART_ADDRESSES.length !== 0) {
-      throw new Error(`the number of smart addresses must match the number of accounts or be empty.`)
     }
 
     const tasks = PRIVATE_KEYS.map((account, index) => run(
