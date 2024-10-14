@@ -7,7 +7,11 @@ import { toHumanTime, wait } from './utils.js'
 async function play(app, game) {
   while (!app.limitedGames[game]) {
     const method = 'play' + game.charAt(0).toUpperCase() + game.slice(1)
-    await app[method]()
+    try {
+      await app[method]()
+    } catch (error) {
+      app.gameWait(game, 10000, error)
+    }
   }
 }
 
@@ -28,11 +32,7 @@ async function run(account, smartAddress, proxy) {
     // Game cycles
     for (const game in GAMES) {
       if (Object.prototype.hasOwnProperty.call(GAMES, game)) {
-        try {
-          promises.push(play(app, game))
-        } catch (error) {
-          throw error
-        }
+        promises.push(play(app, game))
       }
     }
 
@@ -41,19 +41,19 @@ async function run(account, smartAddress, proxy) {
     // Schedule next cycle
     const duration = 4320000
     log.info(`Cycle complete for account ${app.address}. Pausing for ${toHumanTime(duration)}`)
-    await wait(duration, account, `Delaying for next cycle: ${toHumanTime(duration)}`, app)
+    await wait(duration, `Delaying for next cycle: ${toHumanTime(duration)}`, app)
 
     return run(account, smartAddress, proxy)  // Restart cycle
   } catch (error) {
     log.info(`Account ${PRIVATE_KEYS.indexOf(account) + 1}: Error encountered. Retrying in 10 seconds.`)
-    await wait(10000, account, `Error: ${error.message || JSON.stringify(error)}. Retrying in 10 seconds`, app)
+    await wait(10000, `Error: ${error.message || JSON.stringify(error)}. Retrying in 10 seconds`, app)
     return run(account, smartAddress, proxy)  // Retry operation
   }
 }
 
 async function startBot() {
   try {
-    Output.info('Starting Bot...')
+    console.log('Starting Bot...')
 
     if (PROXIES.length !== PRIVATE_KEYS.length && PROXIES.length !== 0) {
       throw new Error(`the number of proxies must match the number of accounts or be empty.`)

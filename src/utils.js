@@ -32,19 +32,14 @@ export function getRandomUserAgent() {
   return userAgents[Math.floor(Math.random() * userAgents.length)]
 }
 
-export function wait(duration, taskId, logType, message) {
+export function wait(duration, message, app) {
   return new Promise(resolve => {
     let remainingTime = duration
 
     log.info(`Waiting for ${toHumanTime(remainingTime)}`)
 
     const showRemainingTime = () => {
-      const timeText = `${toHumanTime(remainingTime)}`
-      if (taskId !== undefined) {
-        output.log(logType, taskId, message, timeText)
-      } else {
-        output.log(timeText)
-      }
+      output.log(app, message, `${toHumanTime(remainingTime)}`)
     }
 
     showRemainingTime()
@@ -60,10 +55,6 @@ export function wait(duration, taskId, logType, message) {
     setTimeout(async () => {
       clearInterval(interval)
       await output.clearInfo()
-
-      if (taskId) {
-        output.log(logType, taskId, message)
-      }
       resolve()
     }, duration)
   })

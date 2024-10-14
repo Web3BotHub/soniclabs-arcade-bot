@@ -2,7 +2,7 @@ import { ethers } from 'ethers'
 import { Client } from './client.js'
 import { CONTRACT as CONTRACT_ADDRESS, GAMES, PRIVATE_KEYS, REFERRER_CODE, RPC } from './config.js'
 import log from './log.js'
-import { getPrivateKeyType, wait } from './utils.js'
+import { getPrivateKeyType, toHumanTime, wait } from './utils.js'
 
 export default class App extends Client {
   constructor(account, smartAddress, proxy) {
@@ -18,12 +18,24 @@ export default class App extends Client {
     this.referrerCode = REFERRER_CODE
     this.limitedGames = {}
     this.provider = new ethers.JsonRpcProvider(RPC.RPCURL, RPC.CHAINID)
+    this.gameStatus = {
+      plinko: { message: 'pending', waiting: '-' },
+      wheel: { message: 'pending', waiting: '-' },
+      mine: { message: 'pending', waiting: '-' },
+    }
+  }
+
+  async gameWait(game, milliseconds, message) {
+    this.gameStatus[game].message = message
+    this.gameStatus[game].waiting = toHumanTime(milliseconds)
+
+    await wait(milliseconds, message, this)
   }
 
   async connect() {
     try {
       const cleanPrivateKey = this.account.replace(/^0x/, '')
-      await wait(2000, this.account, 'Connecting to account: ' + (PRIVATE_KEYS.indexOf(this.account) + 1), this)
+      await wait(2000, 'Connecting to account: ' + (PRIVATE_KEYS.indexOf(this.account) + 1), this)
       const accountType = getPrivateKeyType(cleanPrivateKey)
       log.info('Account type: ' + accountType)
 
@@ -36,14 +48,14 @@ export default class App extends Client {
       }
 
       this.address = this.wallet.address
-      await wait(2000, this.account, 'Wallet address: ' + JSON.stringify(this.address), this)
+      await wait(2000, 'Wallet address: ' + JSON.stringify(this.address), this)
     } catch (error) {
       throw error
     }
   }
 
   async createSession() {
-    await wait(2000, this.account, 'Creating session', this)
+    await wait(2000, 'Creating session', this)
     const response = await this.fetch('https://arcade.hub.soniclabs.com/rpc', 'POST', undefined, {
       jsonrpc: '2.0',
       id: this.sessionId,
@@ -56,7 +68,7 @@ export default class App extends Client {
 
     this.sessionId += 1
     if (response.status === 200) {
-      await wait(500, this.account, 'Successfully create session', this)
+      await wait(500, 'Successfully create session', this)
     } else {
       throw Error('Failed to create session')
     }
@@ -65,10 +77,10 @@ export default class App extends Client {
   async getBalance(refresh = false) {
     try {
       if (!refresh) {
-        await wait(500, this.account, 'Fetching balance of address: ' + this.wallet.address, this)
+        await wait(500, 'Fetching balance of address: ' + this.wallet.address, this)
       }
       this.balance = ethers.formatEther(await this.provider.getBalance(this.wallet.address))
-      await wait(500, this.account, 'Balance updated: ' + this.balance, this)
+      await wait(500, 'Balance updated: ' + this.balance, this)
     } catch (error) {
       log.error(`Failed to get balance: ${error}`)
       throw error
@@ -76,20 +88,20 @@ export default class App extends Client {
   }
 
   async getPoints() {
-    await wait(3000, this.account, "Getting user points", this)
+    await wait(3000, "Getting user points", this)
     const response = await this.fetch("https://arcade.gateway.soniclabs.com/game/points-by-player?wallet=" + this.smartAddress, 'GET', undefined, undefined, undefined, 'https://arcade.soniclabs.com/', true)
 
     if (response.status == 200) {
       this.today_points = response.today
       this.total_points = response.totalPoints
-      await wait(1500, this.account, "Successfully get total points", this)
+      await wait(1500, "Successfully get total points", this)
     } else {
       throw Error("Failed to get points")
     }
   }
 
   async connectToSonic() {
-    await wait(2000, this.account, 'Connecting to Sonic Arcade', this)
+    await wait(2000, 'Connecting to Sonic Arcade', this)
 
     const messageToSign = "I'm joining Sonic Airdrop Dashboard with my wallet, have been referred by " + this.referrerCode + ", and I agree to the terms and conditions.\nWallet address:\n" + this.address + "\n"
     log.info('Message to sign: ' + messageToSign)
@@ -97,15 +109,15 @@ export default class App extends Client {
     this.signatureMessage = await this.wallet.signMessage(messageToSign)
     log.info('signature: ' + this.signatureMessage)
 
-    await wait(2000, this.account, 'Successfully connected to Sonic Dapp', this)
+    await wait(2000, 'Successfully connected to Sonic Dapp', this)
   }
 
   async getUser() {
-    await wait(2000, this.account, 'Fetching user information', this)
+    await wait(2000, 'Fetching user information', this)
     const response = await this.fetch(`/api/trpc/user.findOrCreate?batch=1&input=${encodeURIComponent(JSON.stringify({ 0: { json: { address: this.wallet.address } } }))}`, 'GET')
     if (response.status == 200) {
       this.user = response[0].result.data.json
-      await wait(500, this.account, 'User information retrieved successfully', this)
+      await wait(500, 'User information retrieved successfully', this)
     } else {
       throw new Error('Failed to get user information')
     }
@@ -113,7 +125,7 @@ export default class App extends Client {
 
   async tryToUpdateReferrer() {
     try {
-      await wait(2000, this.account, 'Validating invite code', this)
+      await wait(2000, 'Validating invite code', this)
 
       if (this.user.invitedCode == null) {
         const response = await this.fetch('/api/trpc/user.setInvited?batch=1', 'POST', undefined, {
@@ -121,11 +133,11 @@ export default class App extends Client {
         })
 
         if (response.status == 200) {
-          await wait(3000, this.account, 'Successfully updated the invite code', this)
+          await wait(3000, 'Successfully updated the invite code', this)
           await this.getUser()
         }
       } else {
-        await wait(3000, this.account, 'Invite code already set', this)
+        await wait(3000, 'Invite code already set', this)
       }
     } catch (error) {
       log.error(`Failed to update user invite code: ${error}`)
@@ -133,7 +145,7 @@ export default class App extends Client {
   }
 
   async permitTypedMessage() {
-    await wait(2000, this.account, 'Try To Permit Sonic Arcade Contract', this)
+    await wait(2000, 'Try To Permit Sonic Arcade Contract', this)
     const response = await this.fetch('https://arcade.hub.soniclabs.com/rpc', 'POST', undefined, {
       'jsonrpc': '2.0',
       'id': this.sessionId,
@@ -151,8 +163,8 @@ export default class App extends Client {
 
     if (response.status == 200) {
       const message = JSON.parse(response.result.typedMessage)
-      await wait(500, this.account, 'Successfully Create Permit', this)
-      await wait(500, this.account, 'Approving Permit Message', this)
+      await wait(500, 'Successfully Create Permit', this)
+      await wait(500, 'Approving Permit Message', this)
       this.permitSignature = await this.wallet.signTypedData(message.json.domain, message.json.types, message.json.message)
       await this.permit()
     } else {
@@ -170,7 +182,7 @@ export default class App extends Client {
   }
 
   async permit() {
-    await wait(2000, this.account, 'Submitting contract permit', this)
+    await wait(2000, 'Submitting contract permit', this)
 
     const response = await this.performRpcRequest('permit', {
       owner: this.address,
@@ -181,7 +193,7 @@ export default class App extends Client {
 
     if (!response.error) {
       this.part = response.result.hashKey
-      await wait(2000, this.account, 'Permit submitted successfully', this)
+      await wait(2000, 'Permit submitted successfully', this)
     } else {
       throw new Error(`Failed to submit permit: ${response.error.message}`)
     }
@@ -197,8 +209,8 @@ export default class App extends Client {
 
   async playMine() {
     await this.playGame('mine')
-    await wait(2000, this.account, "placed", this)
-    await wait(2000, this.account, "Claiming mine game reward", this)
+    await gameWait('mine', 2000, "placed", this)
+    await gameWait('mine', 2000, "Claiming mine game reward", this)
     const response = await this.fetch('https://arcade.hub.soniclabs.com/rpc', 'POST', undefined, {
       'jsonrpc': "2.0",
       'id': this.sessionId,
@@ -221,13 +233,13 @@ export default class App extends Client {
     }, 'https://arcade.soniclabs.com/', true)
 
     if (response.error) {
-      await wait(3000, this.account, `Failed to claim mine game: ${response.error?.["message"]}`, this)
+      await gameWait('mine', 3000, `Failed to claim mine game: ${response.error?.["message"]}`, this)
     }
 
     if (response.result?.["hash"]?.['errorTypes']) {
-      await wait(2000, this.account, `Claim failed: ${response.result?.["hash"]?.["actualError"]?.["details"]}`, this)
+      await gameWait('mine', 2000, `Claim failed: ${response.result?.["hash"]?.["actualError"]?.["details"]}`, this)
     } else {
-      await wait(3000, this.account, "Successfully play and claim mine game.", this)
+      await gameWait('mine', 3000, "Successfully play and claim mine game.", this)
     }
   }
 
@@ -238,7 +250,7 @@ export default class App extends Client {
 
     const callData = GAMES[name]
 
-    await wait(3000, this.account, `Playing game: [${name}]`, this)
+    await gameWait(name, 3000, `Playing game: [${name}]`, this)
 
     const response = await this.performRpcRequest('call', {
       call: callData,
@@ -250,15 +262,15 @@ export default class App extends Client {
     this.sessionId += 1
 
     if (!response.error) {
-      await wait(3000, this.account, `Successfully played game: [${name}]`, this)
+      await gameWait(name, 3000, `Successfully played game: [${name}]`, this)
     } else {
       const errorMessage = response.error?.message || 'Unknown'
 
       if (errorMessage.includes('limit')) {
         this.limitedGames[name] = true
-        await wait(3000, this.account, errorMessage)
+        await gameWait(name, 3000, errorMessage, this)
       } else if (errorMessage.includes('random number')) {
-        await wait(20000, this.account, errorMessage)
+        await gameWait(name, 20000, errorMessage, this)
       } else if (errorMessage.includes('Permit')) {
         throw new Error(`Failed to play game: [${name}]`.errorMessage)
       }
