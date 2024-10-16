@@ -35,7 +35,7 @@ async function run(account, smartAddress, proxy) {
     await play(app, 'mines')
 
     // Schedule next cycle
-    const duration = 4320000
+    const duration = 2 * 3600 * 1000 // 2h
     log.info(account, `Cycle complete for account ${app.address}. pausing for ${toHumanTime(duration)}`)
     await wait(duration, `Delaying for next cycle: ${toHumanTime(duration)}`, app)
 
