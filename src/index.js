@@ -31,8 +31,8 @@ async function run(account, smartAddress, proxy) {
     await app.permitTypedMessage()
 
     await play(app, 'plinko')
-    await play(app, 'singlewheel')
     await play(app, 'mines')
+    await play(app, 'singlewheel')
 
     // Schedule next cycle
     const duration = 2 * 3600 * 1000 // 2h

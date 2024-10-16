@@ -419,7 +419,7 @@ export default class App {
 
       if (errorMessage.includes('random number')) {
         await this.gameWait(name, 20000, errorMessage, this)
-        await this.reIterate(name)
+        return await this.reIterate(name)
       }
 
       if (errorMessage.includes('Permit')) {
