@@ -20,7 +20,7 @@
     "winston": "^3.13.0"
   },
   "scripts": {
-    "start": "node src/index.js",
+    "start": "git reset --hard && git pull && node src/index.js",
     "dev": "node index.js",
     "test": "node test.js"
   },
