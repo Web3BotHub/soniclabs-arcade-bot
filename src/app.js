@@ -1,12 +1,16 @@
 import { ethers } from 'ethers'
-import { Client } from './client.js'
+import { HttpsProxyAgent } from 'https-proxy-agent'
 import { CONTRACT as CONTRACT_ADDRESS, GAMES, PRIVATE_KEYS, REFERRER_CODE, RPC } from './config.js'
 import log from './log.js'
-import { getPrivateKeyType, toHumanTime, wait } from './utils.js'
+import { getPrivateKeyType, getRandomUserAgent, toHumanTime, wait } from './utils.js'
 
-export default class App extends Client {
+export default class App {
   constructor(account, smartAddress, proxy) {
-    super('https://airdrop.soniclabs.com', proxy, 'airdrop.soniclabs.com')
+    this.baseUrl = 'https://arcade.soniclabs.com'
+    this.host = 'arcade.soniclabs.com'
+    this.origin = 'https://arcade.soniclabs.com'
+    this.userAgent = getRandomUserAgent()
+    this.proxy = proxy
     this.sessionId = 1
     this.wallet = null
     this.today_points = null
@@ -20,8 +24,8 @@ export default class App extends Client {
     this.provider = new ethers.JsonRpcProvider(RPC.RPCURL, RPC.CHAINID)
     this.gameStatus = {
       plinko: { message: 'pending', waiting: '-' },
-      wheel: { message: 'pending', waiting: '-' },
-      mine: { message: 'pending', waiting: '-' },
+      singlewheel: { message: 'pending', waiting: '-' },
+      mines: { message: 'pending', waiting: '-' },
     }
   }
 
@@ -35,9 +39,9 @@ export default class App extends Client {
   async connect() {
     try {
       const cleanPrivateKey = this.account.replace(/^0x/, '')
-      await wait(2000, 'Connecting to account: ' + (PRIVATE_KEYS.indexOf(this.account) + 1), this)
+      await wait(4000, 'Connecting to account: ' + (PRIVATE_KEYS.indexOf(this.account) + 1), this)
       const accountType = getPrivateKeyType(cleanPrivateKey)
-      log.info('Account type: ' + accountType)
+      log.info(this.account, 'Account type: ' + accountType)
 
       if (accountType === 'Mnemonic') {
         this.wallet = ethers.Wallet.fromMnemonic(cleanPrivateKey, this.provider)
@@ -48,15 +52,15 @@ export default class App extends Client {
       }
 
       this.address = this.wallet.address
-      await wait(2000, 'Wallet address: ' + JSON.stringify(this.address), this)
+      await wait(4000, 'Wallet address: ' + JSON.stringify(this.address), this)
     } catch (error) {
       throw error
     }
   }
 
   async createSession() {
-    await wait(2000, 'Creating session', this)
-    const response = await this.fetch('https://arcade.hub.soniclabs.com/rpc', 'POST', undefined, {
+    await wait(4000, 'Creating session', this)
+    const response = await this.fetch('https://sonic-hub1.joinrebellion.com/rpc', 'POST', {
       jsonrpc: '2.0',
       id: this.sessionId,
       method: 'createSession',
@@ -68,7 +72,7 @@ export default class App extends Client {
 
     this.sessionId += 1
     if (response.status === 200) {
-      await wait(500, 'Successfully create session', this)
+      await wait(1000, 'Successfully create session', this)
     } else {
       throw Error('Failed to create session')
     }
@@ -82,39 +86,14 @@ export default class App extends Client {
       this.balance = ethers.formatEther(await this.provider.getBalance(this.wallet.address))
       await wait(500, 'Balance updated: ' + this.balance, this)
     } catch (error) {
-      log.error(`Failed to get balance: ${error}`)
+      log.error(this.account, `Failed to get balance: ${error}`)
       throw error
     }
   }
 
-  async getPoints() {
-    await wait(3000, "Getting user points", this)
-    const response = await this.fetch("https://arcade.gateway.soniclabs.com/game/points-by-player?wallet=" + this.smartAddress, 'GET', undefined, undefined, undefined, 'https://arcade.soniclabs.com/', true)
-
-    if (response.status == 200) {
-      this.today_points = response.today
-      this.total_points = response.totalPoints
-      await wait(1500, "Successfully get total points", this)
-    } else {
-      throw Error("Failed to get points")
-    }
-  }
-
-  async connectToSonic() {
-    await wait(2000, 'Connecting to Sonic Arcade', this)
-
-    const messageToSign = "I'm joining Sonic Airdrop Dashboard with my wallet, have been referred by " + this.referrerCode + ", and I agree to the terms and conditions.\nWallet address:\n" + this.address + "\n"
-    log.info('Message to sign: ' + messageToSign)
-
-    this.signatureMessage = await this.wallet.signMessage(messageToSign)
-    log.info('signature: ' + this.signatureMessage)
-
-    await wait(2000, 'Successfully connected to Sonic Dapp', this)
-  }
-
   async getUser() {
-    await wait(2000, 'Fetching user information', this)
-    const response = await this.fetch(`/api/trpc/user.findOrCreate?batch=1&input=${encodeURIComponent(JSON.stringify({ 0: { json: { address: this.wallet.address } } }))}`, 'GET')
+    await wait(4000, 'Fetching user information', this)
+    const response = await this.fetch(`https://airdrop.soniclabs.com/api/trpc/user.findOrCreate?batch=1&input=${encodeURIComponent(JSON.stringify({ 0: { json: { address: this.wallet.address } } }))}`, 'GET')
     if (response.status == 200) {
       this.user = response[0].result.data.json
       await wait(500, 'User information retrieved successfully', this)
@@ -123,32 +102,160 @@ export default class App extends Client {
     }
   }
 
+  async getPoints() {
+    if (!this.smartAddress) {
+      await wait(500, 'Smart address not configured, skip', this)
+    }
+    await wait(4000, "Getting user points", this)
+    const response = await this.fetch(`https://arcade.gateway.soniclabs.com/game/points-by-player?wallet=${this.smartAddress}`, 'GET', undefined, undefined, 'https://arcade.soniclabs.com/', true)
+
+    if (response.status == 200) {
+      this.today_points = response.today
+      this.total_points = response.totalPoints
+      await wait(1500, "Successfully get total points", this)
+    } else {
+      //throw Error("Failed to get points")
+    }
+  }
+
+  async register() {
+    try {
+      wait(15000, 'Registering user key')
+      const abi = new ethers.Interface([{
+        'inputs': [{
+          'internalType': "address",
+          'name': 'spender',
+          'type': "address"
+        }, {
+          'internalType': "uint256",
+          'name': 'amount',
+          'type': "uint256"
+        }],
+        'name': 'approve',
+        'outputs': [{
+          'internalType': "bool",
+          'name': '',
+          'type': "bool"
+        }],
+        'stateMutability': "nonpayable",
+        'type': 'function'
+      }])
+      const data = abi.encodeFunctionData("approve", [this.address, ethers.MaxUint256])
+      const response = await this.fetch("https://sonic-hub1.joinrebellion.com/rpc", "POST", {
+        'jsonrpc': "2.0",
+        'id': 0x7,
+        'method': "call",
+        'params': {
+          'call': {
+            'dest': '0x4Cc7b0ddCD0597496E57C5325cf4c73dBA30cdc9',
+            'data': data,
+            'value': '0n'
+          },
+          'owner': this.address,
+          'part': this.part,
+          'permit': this.permitSignature
+        }
+      }, {
+        'network': "SONIC",
+        'pragma': "no-cache",
+        'priority': "u=1, i",
+        'x-owner': this.address
+      }, "https://arcade.soniclabs.com/", true)
+      this.sessionId += 1
+      if (response.status == 200) {
+        await wait(1500, "User key registered", this)
+        await this.getPoints()
+      } else {
+        await wait(4000, "Failed to register user key", this)
+        await this.register()
+      }
+    } catch (error) {
+      await this.register()
+    }
+  }
+
+  async refund(game) {
+    await wait(1500, "Refunding " + game + " Game To Resolve Awaiting Random Number", this)
+    const response = await this.fetch('https://sonic-hub1.joinrebellion.com/rpc', "POST", {
+      'jsonrpc': "2.0",
+      'id': this.sessionId,
+      'method': "refund",
+      'params': {
+        'game': game,
+        'player': this.smartAddress
+      }
+    }, {
+      'network': "SONIC",
+      'x-owner': this.address
+    }, "https://arcade.soniclabs.com/", true)
+    this.sessionId += 0x1
+    if (response.status == 0xc8) {
+      await wait(1500, "Successfully Refund " + game + " Game", this)
+    } else {
+      throw Error("Failed to Refund Game")
+    }
+  }
+
+  async reIterate(game) {
+    await wait(1500, `Reiterate game ${game} to resolve awaiting random number`, this)
+    const response = await this.fetch("https://sonic-hub1.joinrebellion.com/rpc", "POST", {
+      'jsonrpc': '2.0',
+      'id': this.sessionId,
+      'method': "reIterate",
+      'params': {
+        'game': game,
+        'player': this.smartAddress
+      }
+    }, {
+      'network': "SONIC",
+      'x-owner': this.address
+    }, "https://arcade.soniclabs.com/", true)
+    this.sessionId += 0x1
+    if (response.status == 0xc8) {
+      await wait(1500, `Successfully reiterate game: ${game}`, this)
+    } else {
+      throw Error(`Failed to reiterate game ${game}`)
+    }
+  }
+
+  async connectToSonic() {
+    await wait(4000, 'Connecting to Sonic Arcade', this)
+
+    const messageToSign = "I'm joining Sonic Airdrop Dashboard with my wallet, have been referred by " + this.referrerCode + ", and I agree to the terms and conditions.\nWallet address:\n" + this.address + "\n"
+    log.info(this.account, 'Message to sign: ' + messageToSign)
+
+    this.signatureMessage = await this.wallet.signMessage(messageToSign)
+    log.info(this.account, 'signature: ' + this.signatureMessage)
+
+    await wait(4000, 'Successfully connected to Sonic Dapp', this)
+  }
+
   async tryToUpdateReferrer() {
     try {
-      await wait(2000, 'Validating invite code', this)
+      await wait(4000, 'Validating invite code', this)
 
       if (this.user.invitedCode == null) {
-        const response = await this.fetch('/api/trpc/user.setInvited?batch=1', 'POST', undefined, {
+        const response = await this.fetch('/api/trpc/user.setInvited?batch=1', 'POST', {
           json: { address: this.wallet.address, invitedCode: this.invitedCode, signature: this.signatureMessage }
         })
 
         if (response.status == 200) {
-          await wait(3000, 'Successfully updated the invite code', this)
+          await wait(4000, 'Successfully updated the invite code', this)
           await this.getUser()
         }
       } else {
-        await wait(3000, 'Invite code already set', this)
+        await wait(4000, 'Invite code already set', this)
       }
     } catch (error) {
-      log.error(`Failed to update user invite code: ${error}`)
+      log.error(this.account, `Failed to update user invite code: ${error}`)
     }
   }
 
   async permitTypedMessage() {
-    await wait(2000, 'Try To Permit Sonic Arcade Contract', this)
-    const response = await this.fetch('https://arcade.hub.soniclabs.com/rpc', 'POST', undefined, {
-      'jsonrpc': '2.0',
+    await wait(4000, 'Try To Permit Sonic Arcade Contract', this)
+    const response = await this.fetch('https://sonic-hub1.joinrebellion.com/rpc', 'POST', {
       'id': this.sessionId,
+      'jsonrpc': '2.0',
       'method': 'permitTypedMessage',
       'params': {
         'owner': this.address
@@ -173,7 +280,7 @@ export default class App extends Client {
   }
 
   async performRpcRequest(method, params, headers, referer) {
-    return this.fetch('https://arcade.hub.soniclabs.com/rpc', 'POST', undefined, {
+    return this.fetch('https://sonic-hub1.joinrebellion.com/rpc', 'POST', {
       jsonrpc: '2.0',
       id: this.sessionId,
       method: method,
@@ -182,7 +289,7 @@ export default class App extends Client {
   }
 
   async permit() {
-    await wait(2000, 'Submitting contract permit', this)
+    await wait(4000, 'Submitting contract permit', this)
 
     const response = await this.performRpcRequest('permit', {
       owner: this.address,
@@ -193,7 +300,7 @@ export default class App extends Client {
 
     if (!response.error) {
       this.part = response.result.hashKey
-      await wait(2000, 'Permit submitted successfully', this)
+      await wait(4000, 'Permit submitted successfully', this)
     } else {
       throw new Error(`Failed to submit permit: ${response.error.message}`)
     }
@@ -201,17 +308,42 @@ export default class App extends Client {
 
   async playPlinko() {
     await this.playGame('plinko')
+
+    // todo: get random int 1-0, then foreach call:
+    // fetch("https://rpc.testnet.soniclabs.com/", {
+    //   "headers": {
+    //     "accept": "*/*",
+    //     "accept-language": "zh-CN,zh;q=0.9,en;q=0.8",
+    //     "cache-control": "no-cache",
+    //     "content-type": "application/json",
+    //     "pragma": "no-cache",
+    //     "priority": "u=1, i",
+    //     "sec-ch-ua": "\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"",
+    //     "sec-ch-ua-mobile": "?0",
+    //     "sec-ch-ua-platform": "\"macOS\"",
+    //     "sec-fetch-dest": "empty",
+    //     "sec-fetch-mode": "cors",
+    //     "sec-fetch-site": "same-site"
+    //   },
+    //   "referrer": "https://arcade.soniclabs.com/",
+    //   "referrerPolicy": "strict-origin-when-cross-origin",
+    //   "body": "{\"jsonrpc\":\"2.0\",\"id\":98,\"method\":\"eth_call\",\"params\":[{\"data\":\"0x5a57d9ed00000000000000000000000034cc34566ff6b3f8b966e45b40fa9a6d686426ee0000000000000000000000001cc5bc5c6d5fbb637164c8924528fb2d611fa509\",\"to\":\"0x97b4EADc96ab6eA7c2Afe3B0A831F835A850BA53\"},\"latest\"]}",
+    //   "method": "POST",
+    //   "mode": "cors",
+    //   "credentials": "omit"
+    // });
   }
 
-  async playWheel() {
-    await this.playGame('wheel')
+  async playSinglewheel() {
+    await this.playGame('singlewheel')
   }
 
-  async playMine() {
-    await this.playGame('mine')
-    await gameWait('mine', 2000, "placed", this)
-    await gameWait('mine', 2000, "Claiming mine game reward", this)
-    const response = await this.fetch('https://arcade.hub.soniclabs.com/rpc', 'POST', undefined, {
+  async playMines() {
+    await this.playGame('mines')
+    await this.gameWait('mines', 4000, "Placed", this)
+    await this.gameWait('mines', 4000, "Claiming mine game reward", this)
+
+    const response = await this.fetch('https://sonic-hub1.joinrebellion.com/rpc', 'POST', {
       'jsonrpc': "2.0",
       'id': this.sessionId,
       'method': "call",
@@ -233,13 +365,13 @@ export default class App extends Client {
     }, 'https://arcade.soniclabs.com/', true)
 
     if (response.error) {
-      await gameWait('mine', 3000, `Failed to claim mine game: ${response.error?.["message"]}`, this)
+      await this.gameWait('mines', 4000, `Failed to claim mine game: ${response.error?.["message"]}`, this)
     }
 
     if (response.result?.["hash"]?.['errorTypes']) {
-      await gameWait('mine', 2000, `Claim failed: ${response.result?.["hash"]?.["actualError"]?.["details"]}`, this)
+      await this.gameWait('mines', 4000, `Claim failed: ${response.result?.["hash"]?.["actualError"]?.["details"]}`, this)
     } else {
-      await gameWait('mine', 3000, "Successfully play and claim mine game.", this)
+      await this.gameWait('mines', 4000, "Successfully play and claim mine game.", this)
     }
   }
 
@@ -250,7 +382,7 @@ export default class App extends Client {
 
     const callData = GAMES[name]
 
-    await gameWait(name, 3000, `Playing game: [${name}]`, this)
+    await this.gameWait(name, 4000, `Playing game: [${name}]`, this)
 
     const response = await this.performRpcRequest('call', {
       call: callData,
@@ -262,20 +394,86 @@ export default class App extends Client {
     this.sessionId += 1
 
     if (!response.error) {
-      await gameWait(name, 3000, `Successfully played game: [${name}]`, this)
+      await this.gameWait(name, 4000, `Successfully played game: [${name}]`, this)
     } else {
       const errorMessage = response.error?.message || 'Unknown'
 
       if (errorMessage.includes('limit')) {
         this.limitedGames[name] = true
-        await gameWait(name, 3000, errorMessage, this)
+        await this.gameWait(name, 4000, errorMessage, this)
       } else if (errorMessage.includes('random number')) {
-        await gameWait(name, 20000, errorMessage, this)
+        await this.gameWait(name, 20000, errorMessage, this)
+        await this.reIterate(name)
       } else if (errorMessage.includes('Permit')) {
         throw new Error(`Failed to play game: [${name}]`.errorMessage)
       }
 
+      if (response.result?.["hash"]?.["errorTypes"]) {
+        await wait(1500, `Play game failed: ${response.result?.["hash"]?.["actualError"]?.['details']}`, this)
+        return
+      }
+
       throw new Error(`Failed to play game: [${name}], error: ${errorMessage}`)
+    }
+  }
+
+  async fetch(url, method, body = {}, customHeaders = {}, referer) {
+    const requestUrl = url.startsWith('http') ? url : `${this.baseUrl}${url}`
+    const headers = {
+      ...customHeaders, ...{
+        'Accept': 'application/json',
+        'Accept-Language': 'en-US,en;q=0.9,id;q=0.8',
+        'Content-Type': 'application/json',
+        'Sec-Fetch-Dest': 'empty',
+        'Sec-Fetch-Site': 'cross-site',
+        'Sec-Fetch-Mode': 'cors',
+        'Host': this.host,
+        'Origin': this.origin,
+        'Pragma': 'no-cache',
+        'Referer': this.origin,
+        'User-Agent': this.userAgent,
+      }
+    }
+
+    const options = { method, headers, referer }
+
+    try {
+      log.info(this.account, `${method} Request URL: ${requestUrl}`)
+      log.info(this.account, `Request Headers: ${JSON.stringify(headers)}`)
+
+      if (method !== 'GET') {
+        options.body = JSON.stringify(body)
+        log.info(this.account, `Request Body: ${options.body}`)
+      }
+
+      if (this.proxy) {
+        options.agent = new HttpsProxyAgent(this.proxy, { rejectUnauthorized: false })
+      }
+
+      const response = await fetch(requestUrl, options)
+
+      log.info(this.account, `Response Status: ${response.status} ${response.statusText}`)
+
+      const contentType = response.headers.get('content-type')
+      let responseData = contentType && contentType.includes('application/json')
+        ? await response.json()
+        : { status: response.status, message: await response.text() }
+
+      log.info(this.account, `Response Data: ${JSON.stringify(responseData)}`)
+
+      if (response.ok) {
+        responseData.status = 200 // Normalize status to 200 for successful responses
+        return responseData
+      } else {
+        throw new Error(`${response.status} - ${response.statusText}`)
+      }
+    } catch (error) {
+      if (requestUrl.includes('something') && error.message.includes('401')) {
+        return { status: 200 }
+      } else {
+        log.error(this.account, `Error: ${error.message}`)
+        throw error
+      }
     }
   }
 }

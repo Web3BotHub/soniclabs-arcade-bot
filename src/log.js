@@ -1,5 +1,6 @@
 import fs from "fs"
 import { createLogger, format, transports } from "winston"
+import { PRIVATE_KEYS } from "./config.js"
 const { combine, timestamp, printf, colorize } = format
 const logFormat = printf(
   ({ level: level, message: message, timestamp: timestamp }) => {
@@ -7,46 +8,71 @@ const logFormat = printf(
   }
 )
 
-const LOG_PATH = "app.log"
-
 class Log {
   constructor() {
-    this.logger = createLogger({
-      level: "debug",
-      format: combine(
-        timestamp({
-          format: "YYYY-MM-DD HH:mm:ss",
-        }),
-        colorize(),
-        logFormat
-      ),
-      transports: [new transports.File({ filename: LOG_PATH })],
-      exceptionHandlers: [new transports.File({ filename: LOG_PATH })],
-      rejectionHandlers: [new transports.File({ filename: LOG_PATH })],
-    })
+    this.loggers = {
+      app: createLogger({
+        level: "debug",
+        format: combine(
+          timestamp({
+            format: "YYYY-MM-DD HH:mm:ss",
+          }),
+          colorize(),
+          logFormat
+        ),
+        transports: [new transports.File({ filename: 'logs/app.log' })],
+        exceptionHandlers: [new transports.File({ filename: 'logs/app.log' })],
+        rejectionHandlers: [new transports.File({ filename: 'logs/app.log' })],
+      })
+    }
   }
-  info(message) {
-    this.logger.info(message)
+
+  getLogger(account) {
+    if (account.startsWith('0x')) {
+      account = PRIVATE_KEYS.indexOf(account)
+    }
+
+    if (!this.loggers[account]) {
+      this.loggers[account] = createLogger({
+        level: "debug",
+        format: combine(
+          timestamp({
+            format: "YYYY-MM-DD HH:mm:ss",
+          }),
+          colorize(),
+          logFormat
+        ),
+        transports: [new transports.File({ filename: `logs/${account}.log` })],
+        exceptionHandlers: [new transports.File({ filename: `logs/${account}.log` })],
+        rejectionHandlers: [new transports.File({ filename: `logs/${account}.log` })],
+      })
+    }
+
+    return this.loggers[account]
   }
-  warn(message) {
-    this.logger.warn(message)
+
+  info(account, message) {
+    this.getLogger(account).info(message)
   }
-  error(message) {
-    this.logger.error(message)
+  warn(account, message) {
+    this.getLogger(account).warn(message)
   }
-  debug(message) {
-    this.logger.debug(message)
+  error(account, message) {
+    this.getLogger(account).error(message)
   }
-  setLevel(message) {
-    this.logger.level = message
+  debug(account, message) {
+    this.getLogger(account).debug(message)
+  }
+  setLevel(account, message) {
+    this.getLogger(account).level = message
   }
   clear() {
-    fs.truncate(LOG_PATH, 0, (error) => {
+    fs.rm('logs', { recursive: true }, (error) => {
       if (error) {
-        return this.logger.error("Failed to clear logs: " + error.message)
+        return console.error("Failed to clear logs: " + error.message)
       }
 
-      this.logger.info("Logs cleared")
+      console.info("Logs cleared")
     })
   }
 }

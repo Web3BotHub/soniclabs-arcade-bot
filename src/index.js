@@ -9,8 +9,9 @@ async function play(app, game) {
     const method = 'play' + game.charAt(0).toUpperCase() + game.slice(1)
     try {
       await app[method]()
+      await app.getPoints()
     } catch (error) {
-      app.gameWait(game, 10000, error)
+      await app.gameWait(game, 30000, error)
     }
   }
 }
@@ -18,7 +19,7 @@ async function play(app, game) {
 async function run(account, smartAddress, proxy) {
   const app = new App(account, smartAddress, proxy)
   try {
-    log.info(`Initializing account: ${PRIVATE_KEYS.indexOf(account) + 1}`)
+    log.info(account, `Initializing account: ${PRIVATE_KEYS.indexOf(account) + 1}`)
     await app.connect()
     await app.getBalance()
     await app.connectToSonic()
@@ -40,21 +41,19 @@ async function run(account, smartAddress, proxy) {
 
     // Schedule next cycle
     const duration = 4320000
-    log.info(`Cycle complete for account ${app.address}. Pausing for ${toHumanTime(duration)}`)
+    log.info(account, `Cycle complete for account ${app.address}. Pausing for ${toHumanTime(duration)}`)
     await wait(duration, `Delaying for next cycle: ${toHumanTime(duration)}`, app)
 
     return run(account, smartAddress, proxy)  // Restart cycle
   } catch (error) {
-    log.info(`Account ${PRIVATE_KEYS.indexOf(account) + 1}: Error encountered. Retrying in 10 seconds.`)
-    await wait(10000, `Error: ${error.message || JSON.stringify(error)}. Retrying in 10 seconds`, app)
+    log.info(account, `Account ${PRIVATE_KEYS.indexOf(account) + 1}: Error encountered. Retrying in 30 seconds.`)
+    await wait(30000, `Error: ${error.message || JSON.stringify(error)}. Retrying in 30 seconds`, app)
     return run(account, smartAddress, proxy)  // Retry operation
   }
 }
 
 async function startBot() {
   try {
-    console.log('Starting Bot...')
-
     if (PROXIES.length !== PRIVATE_KEYS.length && PROXIES.length !== 0) {
       throw new Error(`the number of proxies must match the number of accounts or be empty.`)
     }
@@ -67,7 +66,7 @@ async function startBot() {
     await Promise.all(tasks)
   } catch (error) {
     console.error('Bot halted due to error:', error)
-    log.error('Bot halted due to error:', error)
+    log.error(account, 'Bot halted due to error:', error)
   }
 }
 
@@ -77,7 +76,8 @@ async function startBot() {
     console.clear()
     console.info('Application created!')
     console.log('----- SonicLabs Arcade Testnet BOT -----')
-    console.log('Ensure your bot is up-to-date by running: git pull')
+    console.log('Ensure your bot is up-to-date by running: ')
+    console.log('git reset --hard && git pull')
     console.log('---------------------------------------')
 
     await startBot()

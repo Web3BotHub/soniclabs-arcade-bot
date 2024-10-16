@@ -36,7 +36,7 @@ export function wait(duration, message, app) {
   return new Promise(resolve => {
     let remainingTime = duration
 
-    log.info(`Waiting for ${toHumanTime(remainingTime)}`)
+    log.info(app.account, `Waiting for ${toHumanTime(remainingTime)}`)
 
     const showRemainingTime = () => {
       output.log(app, message, `${toHumanTime(remainingTime)}`)

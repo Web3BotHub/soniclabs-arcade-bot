@@ -17,9 +17,9 @@ Points       : today: ${app.today_points ?? '-'} / total: ${app.total_points ?? 
 Status       : ${message}
 Waiting      : ${waiting}
 Game Status  :
-    - plinko : ${app.gameStatus.plinko.message} (${app.gameStatus.plinko.waiting})
-    - wheel  : ${app.gameStatus.wheel.message} (${app.gameStatus.wheel.waiting})
-    - mine   : ${app.gameStatus.mine.message} (${app.gameStatus.mine.waiting})
+- plinko     : ${app.gameStatus.plinko.message} (${app.gameStatus.plinko.waiting})
+- singlewheel: ${app.gameStatus.singlewheel.message} (${app.gameStatus.singlewheel.waiting})
+- mines      : ${app.gameStatus.mines.message} (${app.gameStatus.mines.waiting})
 -----------------`
     })
   }
