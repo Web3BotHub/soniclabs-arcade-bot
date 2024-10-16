@@ -1,6 +1,6 @@
-import fs from "fs"
 import { createLogger, format, transports } from "winston"
 import { PRIVATE_KEYS } from "./config.js"
+
 const { combine, timestamp, printf, colorize } = format
 const logFormat = printf(
   ({ level: level, message: message, timestamp: timestamp }) => {
@@ -65,15 +65,6 @@ class Log {
   }
   setLevel(account, message) {
     this.getLogger(account).level = message
-  }
-  clear() {
-    fs.rm('logs', { recursive: true }, (error) => {
-      if (error) {
-        return console.error("Failed to clear logs: " + error.message)
-      }
-
-      console.info("Logs cleared")
-    })
   }
 }
 

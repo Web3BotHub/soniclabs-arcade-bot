@@ -20,12 +20,21 @@ export default class App {
     this.smartAddress = smartAddress
     this.permitSignature = null
     this.referrerCode = REFERRER_CODE
-    this.limitedGames = {}
-    this.provider = new ethers.JsonRpcProvider(RPC.RPCURL, RPC.CHAINID)
+    this.limitedGames = {
+      plinko: false,
+      singlewheel: false,
+      mines: false,
+    }
     this.gameStatus = {
       plinko: { message: 'pending', waiting: '-' },
       singlewheel: { message: 'pending', waiting: '-' },
       mines: { message: 'pending', waiting: '-' },
+    }
+
+    try {
+      this.provider = new ethers.JsonRpcProvider(RPC.RPCURL, RPC.CHAINID)
+    } catch (error) {
+      log.error(this.account, `Failed to connect to testnet: ${error}`)
     }
   }
 
@@ -175,7 +184,7 @@ export default class App {
   }
 
   async refund(game) {
-    await wait(1500, "Refunding " + game + " Game To Resolve Awaiting Random Number", this)
+    await wait(1500, `Refunding game ${game} to resolve awaiting random number`, this)
     const response = await this.fetch('https://sonic-hub1.joinrebellion.com/rpc', "POST", {
       'jsonrpc': "2.0",
       'id': this.sessionId,
@@ -190,7 +199,7 @@ export default class App {
     }, "https://arcade.soniclabs.com/", true)
     this.sessionId += 0x1
     if (response.status == 0xc8) {
-      await wait(1500, "Successfully Refund " + game + " Game", this)
+      await wait(1500, `Successfully refund game: ${game}`, this)
     } else {
       throw Error("Failed to Refund Game")
     }
@@ -252,7 +261,7 @@ export default class App {
   }
 
   async permitTypedMessage() {
-    await wait(4000, 'Try To Permit Sonic Arcade Contract', this)
+    await wait(4000, 'Try to permit Sonic Arcade contract', this)
     const response = await this.fetch('https://sonic-hub1.joinrebellion.com/rpc', 'POST', {
       'id': this.sessionId,
       'jsonrpc': '2.0',
@@ -270,8 +279,8 @@ export default class App {
 
     if (response.status == 200) {
       const message = JSON.parse(response.result.typedMessage)
-      await wait(500, 'Successfully Create Permit', this)
-      await wait(500, 'Approving Permit Message', this)
+      await wait(500, 'Successfully create permit', this)
+      await wait(500, 'Approving permit message', this)
       this.permitSignature = await this.wallet.signTypedData(message.json.domain, message.json.types, message.json.message)
       await this.permit()
     } else {
@@ -340,6 +349,11 @@ export default class App {
 
   async playMines() {
     await this.playGame('mines')
+
+    if (this.limitedGames['mines']) {
+      return
+    }
+
     await this.gameWait('mines', 4000, "Placed", this)
     await this.gameWait('mines', 4000, "Claiming mine game reward", this)
 
@@ -400,11 +414,15 @@ export default class App {
 
       if (errorMessage.includes('limit')) {
         this.limitedGames[name] = true
-        await this.gameWait(name, 4000, errorMessage, this)
-      } else if (errorMessage.includes('random number')) {
+        return await this.gameWait(name, 4000, errorMessage, this)
+      }
+
+      if (errorMessage.includes('random number')) {
         await this.gameWait(name, 20000, errorMessage, this)
         await this.reIterate(name)
-      } else if (errorMessage.includes('Permit')) {
+      }
+
+      if (errorMessage.includes('Permit')) {
         throw new Error(`Failed to play game: [${name}]`.errorMessage)
       }
 
@@ -418,6 +436,7 @@ export default class App {
   }
 
   async fetch(url, method, body = {}, customHeaders = {}, referer) {
+    log.info(this.account, `Fetching: ${url}`)
     const requestUrl = url.startsWith('http') ? url : `${this.baseUrl}${url}`
     const headers = {
       ...customHeaders, ...{
@@ -439,11 +458,11 @@ export default class App {
 
     try {
       log.info(this.account, `${method} Request URL: ${requestUrl}`)
-      log.info(this.account, `Request Headers: ${JSON.stringify(headers)}`)
+      log.info(this.account, `Request headers: ${JSON.stringify(headers)}`)
 
       if (method !== 'GET') {
         options.body = JSON.stringify(body)
-        log.info(this.account, `Request Body: ${options.body}`)
+        log.info(this.account, `Request body: ${options.body}`)
       }
 
       if (this.proxy) {
@@ -452,14 +471,14 @@ export default class App {
 
       const response = await fetch(requestUrl, options)
 
-      log.info(this.account, `Response Status: ${response.status} ${response.statusText}`)
+      log.info(this.account, `Response status: ${response.status} ${response.statusText}`)
 
       const contentType = response.headers.get('content-type')
       let responseData = contentType && contentType.includes('application/json')
         ? await response.json()
         : { status: response.status, message: await response.text() }
 
-      log.info(this.account, `Response Data: ${JSON.stringify(responseData)}`)
+      log.info(this.account, `Response data: ${JSON.stringify(responseData)}`)
 
       if (response.ok) {
         responseData.status = 200 // Normalize status to 200 for successful responses

@@ -9,7 +9,7 @@ class Output {
   log(app, message, waiting = 'running') {
     this.twisters.put(app.account, {
       text: `Account ${PRIVATE_KEYS.indexOf(app.account) + 1}
------------------
+---------------------------------------------------------
 Address      : ${app.address ?? '-'}
 SmartAddress : ${app.smartAddress ?? '-'}
 Balance      : ${app.balance ?? '-'} ${RPC.SYMBOL}
@@ -20,7 +20,7 @@ Game Status  :
 - plinko     : ${app.gameStatus.plinko.message} (${app.gameStatus.plinko.waiting})
 - singlewheel: ${app.gameStatus.singlewheel.message} (${app.gameStatus.singlewheel.waiting})
 - mines      : ${app.gameStatus.mines.message} (${app.gameStatus.mines.waiting})
------------------`
+---------------------------------------------------------`
     })
   }
 
