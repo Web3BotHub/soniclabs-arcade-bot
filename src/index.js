@@ -35,14 +35,14 @@ async function run(account, smartAddress, proxy) {
     await play(app, 'singlewheel')
 
     // Schedule next cycle
-    const duration = 2 * 3600 * 1000 // 2h
+    const duration = 4 * 3600 * 1000 // 4h
     log.info(account, `Cycle complete for account ${app.address}. pausing for ${toHumanTime(duration)}`)
     await wait(duration, `Delaying for next cycle: ${toHumanTime(duration)}`, app)
 
     return run(account, smartAddress, proxy)  // Restart cycle
   } catch (error) {
-    log.info(account, `Error encountered. retrying in 60 seconds.`)
-    await wait(60000, `Error: ${error.message || JSON.stringify(error)}. retrying in 60 seconds`, app)
+    log.info(account, `Error encountered. retrying in 120 seconds.`)
+    await wait(120000, `Error: ${error.message || JSON.stringify(error)}. retrying in 120 seconds`, app)
     return run(account, smartAddress, proxy)  // Retry operation
   }
 }

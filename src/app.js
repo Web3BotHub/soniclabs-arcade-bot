@@ -199,7 +199,7 @@ export default class App {
     }, "https://arcade.soniclabs.com/", true)
     this.sessionId += 0x1
     if (response.status == 0xc8) {
-      await wait(1500, `Successfully refund game: ${game}`, this)
+      await wait(2000, `Successfully refund game: ${game}`, this)
     } else {
       throw Error("Failed to Refund Game")
     }
@@ -221,7 +221,7 @@ export default class App {
     }, "https://arcade.soniclabs.com/", true)
     this.sessionId += 0x1
     if (response.status == 0xc8) {
-      await wait(1500, `Successfully reiterate game: ${game}`, this)
+      await wait(2000, `Successfully reiterate game: ${game}`, this)
     } else {
       throw Error(`Failed to reiterate game ${game}`)
     }
@@ -379,13 +379,13 @@ export default class App {
     }, 'https://arcade.soniclabs.com/', true)
 
     if (response.error) {
-      await this.gameWait('mines', 4000, `Failed to claim mine game: ${response.error?.["message"]}`, this)
+      await this.gameWait('mines', 30000, `Failed to claim mine game: ${response.error?.["message"]}`, this)
     }
 
     if (response.result?.["hash"]?.['errorTypes']) {
-      await this.gameWait('mines', 4000, `Claim failed: ${response.result?.["hash"]?.["actualError"]?.["details"]}`, this)
+      await this.gameWait('mines', 30000, `Claim failed: ${response.result?.["hash"]?.["actualError"]?.["details"]}`, this)
     } else {
-      await this.gameWait('mines', 4000, "Successfully play and claim mine game.", this)
+      await this.gameWait('mines', 30000, "Successfully play and claim mine game.", this)
     }
   }
 
@@ -408,17 +408,17 @@ export default class App {
     this.sessionId += 1
 
     if (!response.error) {
-      await this.gameWait(name, 4000, `Successfully played game: [${name}]`, this)
+      await this.gameWait(name, 10000, `Successfully played game: [${name}]`, this)
     } else {
       const errorMessage = response.error?.message || 'Unknown'
 
       if (errorMessage.includes('limit')) {
         this.limitedGames[name] = true
-        return await this.gameWait(name, 4000, errorMessage, this)
+        return await this.gameWait(name, 60000, errorMessage, this)
       }
 
       if (errorMessage.includes('random number')) {
-        await this.gameWait(name, 20000, errorMessage, this)
+        await this.gameWait(name, 30000, errorMessage, this)
         return await this.reIterate(name)
       }
 
@@ -427,7 +427,7 @@ export default class App {
       }
 
       if (response.result?.["hash"]?.["errorTypes"]) {
-        await wait(1500, `Play game failed: ${response.result?.["hash"]?.["actualError"]?.['details']}`, this)
+        await wait(15000, `Play game failed: ${response.result?.["hash"]?.["actualError"]?.['details']}`, this)
         return
       }
 
