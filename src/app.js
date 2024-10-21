@@ -414,7 +414,7 @@ export default class App {
 
       if (errorMessage.includes('limit')) {
         this.limitedGames[name] = true
-        return await this.gameWait(name, 60000, errorMessage, this)
+        return await this.gameWait(name, 600000, errorMessage, this)
       }
 
       if (errorMessage.includes('random number')) {
